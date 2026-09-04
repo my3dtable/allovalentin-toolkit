@@ -1,0 +1,5 @@
+{
+  "OllamaUrl": "https://ia.allovalentin.fr",
+  "Token": "COLLE_ICI_LE_JETON",
+  "Model": "qwen2.5:7b"
+}

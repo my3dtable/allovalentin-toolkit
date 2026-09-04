@@ -1,0 +1,8 @@
+# Ne jamais publier le fichier de config IA (contient le jeton d'acces)
+ia-client.json
+
+# Sorties locales
+*.log
+Rapports-Client/
+Snapshots/
+Diagnostic-*.html
