@@ -1,6 +1,9 @@
 # Ne jamais publier le fichier de config IA (contient le jeton d'acces)
 ia-client.json
 
+# Cle d'intervention deposee localement par le lanceur
+cle.txt
+
 # Sorties locales
 *.log
 Rapports-Client/

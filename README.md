@@ -15,6 +15,19 @@ irm https://allovalentin.fr/opti.ps1 | iex
 Ca telecharge la derniere version du toolkit dans
 `%LOCALAPPDATA%\AlloValentin-Toolkit` et ouvre le menu.
 
+### Diagnostic gratuit / optimisation sur cle
+
+- **Sans cle** : le diagnostic complet est libre (lecture seule, ne modifie rien).
+- **Avec la cle d'intervention** remise par Allo Valentin, l'optimisation
+  (nettoyage + reglages, entierement reversible) se debloque :
+
+  ```powershell
+  irm "https://allovalentin.fr/opti.ps1?cle=VOTRE_CLE" | iex
+  ```
+
+  La cle est validee en ligne au moment d'optimiser. Sans elle, le script
+  produit uniquement le diagnostic.
+
 ## Contenu
 
 | Script | Role |

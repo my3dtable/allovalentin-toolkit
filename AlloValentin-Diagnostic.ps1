@@ -29,7 +29,8 @@ param(
     [switch]$ReportOnly,
     [switch]$SkipTools,
     [switch]$Undo,
-    [switch]$Fast     # saute sfc + DISM : passage de 3-8 min a < 1 min
+    [switch]$Fast,    # saute sfc + DISM : passage de 3-8 min a < 1 min
+    [string]$Cle = "" # cle d'intervention Allo Valentin : debloque l'optimisation (sinon diagnostic seul)
 )
 
 # --- Auto-elevation : si pas admin, on relance le script en admin automatiquement ---
@@ -42,6 +43,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     if ($SkipTools)  { $argList += " -SkipTools" }
     if ($Undo)       { $argList += " -Undo" }
     if ($Fast)       { $argList += " -Fast" }
+    if ($Cle)        { $argList += " -Cle `"$Cle`"" }
     try {
         Start-Process powershell.exe -ArgumentList $argList -Verb RunAs
     } catch {
@@ -248,6 +250,46 @@ if ($Undo) {
     Write-Host "Si besoin, un point de restauration 'AlloValentin-AvantTweaks' est aussi disponible (rstrui.exe)." -ForegroundColor Gray
     Write-Log "=== Fin annulation ==="
     return
+}
+
+# ============================================================
+#  CLE D'INTERVENTION
+#  L'optimisation (nettoyage + reglages, reversible) est reservee aux
+#  interventions Allo Valentin. Sans cle valide, le script produit
+#  uniquement le diagnostic (gratuit, lecture seule).
+# ============================================================
+if (-not $ReportOnly -and -not $Install) {
+    if (-not $Cle) {
+        $cleFile = Join-Path (Split-Path -Parent $PSCommandPath) 'cle.txt'
+        if (Test-Path $cleFile) {
+            try { $Cle = ([string](Get-Content $cleFile -Raw -ErrorAction Stop)).Trim() } catch {}
+        }
+    }
+    $cleOK = $false
+    if ($Cle) {
+        try {
+            $u = "https://allovalentin.fr/api/check?cle=" + [uri]::EscapeDataString($Cle)
+            $rep = Invoke-RestMethod -Uri $u -TimeoutSec 12 -UseBasicParsing
+            $cleOK = [bool]$rep.ok
+        } catch {
+            $cleOK = $false
+            Write-Host "`n  Verification de la cle impossible (pas de connexion Internet ?)." -ForegroundColor Yellow
+        }
+    }
+    if (-not $cleOK) {
+        Write-Host "`n===============================================" -ForegroundColor Cyan
+        Write-Host "  Optimisation reservee aux interventions Allo Valentin" -ForegroundColor Cyan
+        Write-Host "===============================================" -ForegroundColor Cyan
+        Write-Host "  Le diagnostic complet ci-dessous est GRATUIT." -ForegroundColor Gray
+        Write-Host "  L'optimisation (nettoyage + reglages, entierement reversible)" -ForegroundColor Gray
+        Write-Host "  se fait avec la cle remise lors d'une intervention :" -ForegroundColor Gray
+        Write-Host "    Allo Valentin  -  https://allovalentin.fr  -  07 55 53 08 67" -ForegroundColor White
+        Write-Host ""
+        $ReportOnly = $true
+        Write-Log "Pas de cle d'intervention valide -> diagnostic seul (ReportOnly force)." "WARN"
+    } else {
+        Write-Log "Cle d'intervention validee -> optimisation autorisee." "OK"
+    }
 }
 
 $Interactive = -not $ReportOnly
