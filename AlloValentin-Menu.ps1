@@ -128,7 +128,7 @@ while ($continuer) {
             Sous-Menu "Diagnostic & optimisation" @{
                 "1" = @{ Label = "Rapport seul (ne modifie rien)"
                          Action = { Invoke-Outil $scriptDiag "Rapport seul" @('-ReportOnly') } }
-                "2" = @{ Label = "Optimiser (tweaks - 3 niveaux : Faible / Medium / Extreme)"
+                "2" = @{ Label = "Optimiser (tweaks - 3 niveaux : FAIBLE / GAMING / EXTREME)"
                          Action = { Invoke-Outil $scriptDiag "Diagnostic & optimisation" $argCle } }
                 "3" = @{ Label = "Optimiser en mode RAPIDE (saute sfc/DISM : < 1 min au lieu de 3-8)"
                          Action = { Invoke-Outil $scriptDiag "Diagnostic rapide" (@('-Fast') + $argCle) } }

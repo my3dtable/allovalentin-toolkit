@@ -166,7 +166,7 @@ $(if ($constats.Count -eq 0) { "<div class='ok'>Aucun reglage problematique dete
 "@ | Out-File -FilePath $rapport -Encoding UTF8
 Log "Rapport : $rapport" "OK"
 
-$rep = Read-Host "`n  Ouvrir le rapport ? (O/N)"
+$rep = Read-Host "`n  Ouvrir le rapport ? (o/N)"
 if ($rep -match '^[OoYy]') { Start-Process $rapport }
 Write-Host "`n  Appuie sur Entree pour fermer..." -ForegroundColor DarkGray
 try { Read-Host | Out-Null } catch {}

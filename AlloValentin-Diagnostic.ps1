@@ -79,7 +79,7 @@ function ConvertTo-SafeDate {
     try { return [Management.ManagementDateTimeConverter]::ToDateTime([string]$Valeur) }
     catch { return $null }
 }
-function Confirm-Action { param([string]$Prompt) return ((Read-Host "$Prompt (O/N)") -match '^[OoYy]') }
+function Confirm-Action { param([string]$Prompt) return ((Read-Host "$Prompt (o/N)") -match '^[OoYy]') }
 function HtmlEnc { param($s) if($null -eq $s){return ""}; return ([System.Web.HttpUtility]::HtmlEncode([string]$s)) }
 Add-Type -AssemblyName System.Web -ErrorAction SilentlyContinue
 
@@ -307,18 +307,18 @@ if ($Interactive) {
     Write-Host "  ALLO VALENTIN - Niveau d'optimisation" -ForegroundColor Cyan
     Write-Host "===============================================" -ForegroundColor Cyan
     Write-Host "  1. FAIBLE   - Diagnostic + nettoyage sur (aucune modif systeme)" -ForegroundColor Green
-    Write-Host "  2. MEDIUM   - Gaming : tweaks surs et reversibles (plan alim, Game DVR, HAGS, MSI)" -ForegroundColor Yellow
-    Write-Host "  3. HIGH     - Extreme : tout, y compris tweaks agressifs (core parking, reseau)" -ForegroundColor Red
-    Write-Host "  (Entree = Faible par defaut)`n" -ForegroundColor Gray
+    Write-Host "  2. GAMING   - Faible + tweaks surs et reversibles (plan alim, Game DVR, HAGS, MSI)" -ForegroundColor Yellow
+    Write-Host "  3. EXTREME  - Gaming + tweaks agressifs en plus (core parking, reseau)" -ForegroundColor Red
+    Write-Host "  (Entree = FAIBLE par defaut)`n" -ForegroundColor Gray
     $choix = Read-Host "Choix (1/2/3)"
     switch ($choix) {
         "2" { $niveau = "Gaming" }
         "3" { $niveau = "Extreme" }
         default { $niveau = "Faible" }
     }
-    Write-Host "Niveau selectionne : $niveau`n" -ForegroundColor Cyan
+    Write-Host "Niveau selectionne : $($niveau.ToUpper())`n" -ForegroundColor Cyan
 }
-Write-Log "Niveau d'optimisation : $niveau" "OK"
+Write-Log "Niveau d'optimisation : $($niveau.ToUpper())" "OK"
 # Aides de decision : quel niveau autorise quoi
 $tweaksGamingAutorises  = ($niveau -eq "Gaming" -or $niveau -eq "Extreme")
 $tweaksExtremeAutorises = ($niveau -eq "Extreme")
@@ -1000,7 +1000,7 @@ if ($Interactive) {
             }
         }
         # Corbeille
-        try { Clear-RecycleBin -Force -EA SilentlyContinue; $cleanReport += [PSCustomObject]@{ Categorie="Corbeille"; LibereMB="vidée" }; Write-Log "Corbeille videe" "OK" } catch {}
+        try { Clear-RecycleBin -Force -EA SilentlyContinue; $cleanReport += [PSCustomObject]@{ Categorie="Corbeille"; LibereMB="videe" }; Write-Log "Corbeille videe" "OK" } catch {}
 
         # Caches shaders GPU : les vieux caches causent des saccades apres MAJ pilote.
         # On les vide, ils se reconstruisent proprement au prochain lancement des jeux. Sans risque.
@@ -1673,7 +1673,7 @@ function Apply-Tweak {
 }
 
 if ($Interactive -and $tweaksGamingAutorises) {
-    Write-Host "`n=== Tweaks gaming (niveau $niveau, reversibles, backup cree) ===" -ForegroundColor Cyan
+    Write-Host "`n=== Tweaks gaming (niveau $($niveau.ToUpper()), reversibles, backup cree) ===" -ForegroundColor Cyan
     Write-Host "Gain reel mais modeste (fluidite, 1% low). Backup registre + point de restauration.`n" -ForegroundColor Gray
 
     if (Confirm-Action "Appliquer les tweaks gaming (avec sauvegarde) ?") {
@@ -2029,7 +2029,7 @@ $diskLent = $perf | Where-Object { $_.Item -match "Lecture disque" -and $_.Nivea
 # --- P1 : Disque systeme sature (et ses consequences en chaine) ---
 if ($volSysR -and $volSysR.PctLibre -lt 15) {
     $consequences = @()
-    if ($aVolsnap) { $consequences += "les points de restauration ne peuvent plus etre crees (clichés annulés detectes)" }
+    if ($aVolsnap) { $consequences += "les points de restauration ne peuvent plus etre crees (cliches annules detectes)" }
     if ($aCrash)   { $consequences += "un plantage recent a eu lieu (un disque sature peut y contribuer)" }
     $lien = if ($consequences) { " Consequences constatees : " + ($consequences -join " ; ") + "." } else { "" }
     # ou est passee la place : le plus gros poste "manuel" + le total des caches surs
@@ -2233,7 +2233,7 @@ $html = @"
 </style></head><body>
 <div class="header">
   <div class="logo">Allo<span class="u">_</span>Valentin<span class="sub">MAINTENANCE &amp; SUPPORT INFORMATIQUE</span></div>
-  <div class="meta">Poste : <b>$machine</b> &middot; $now &middot; Diagnostic complet &middot; Niveau : <b>$niveau</b></div>
+  <div class="meta">Poste : <b>$machine</b> &middot; $now &middot; Diagnostic complet &middot; Niveau : <b>$($niveau.ToUpper())</b></div>
 </div>
 <div class="wrap">
 

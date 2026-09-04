@@ -905,5 +905,5 @@ $rapport = "$ReportDir\Fluidite-$Stamp.html"
 Set-Content -Path $rapport -Value $html -Encoding UTF8
 Write-Host "  Rapport : $rapport" -ForegroundColor Green
 Write-Host ""
-$rep = Read-Host "  Ouvrir le rapport ? (O/N)"
+$rep = Read-Host "  Ouvrir le rapport ? (o/N)"
 if ($rep -match '^[OoYy]') { Start-Process $rapport }

@@ -195,7 +195,11 @@ if (-not $Avant -and -not $Apres) {
     switch ((Read-Host "  Ton choix").Trim()) {
         "1" { $Avant = $true }
         "2" { $Apres = $true }
-        default { Write-Host "`n  Choix invalide." -ForegroundColor Yellow; exit }
+        default {
+            Write-Host "`n  Choix invalide : tape 1 ou 2." -ForegroundColor Yellow
+            Write-Host "  Appuie sur Entree pour fermer..." -ForegroundColor DarkGray; Read-Host | Out-Null
+            exit
+        }
     }
 }
 
@@ -406,5 +410,5 @@ Write-Log "Rapport HTML : $rapport" "OK"
 Write-Log "=== Fin comparaison ==="
 
 Write-Host ""
-$rep = Read-Host "  Ouvrir le rapport ? (O/N)"
+$rep = Read-Host "  Ouvrir le rapport ? (o/N)"
 if ($rep -match '^[OoYy]') { Start-Process $rapport }

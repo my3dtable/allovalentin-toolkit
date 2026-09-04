@@ -41,7 +41,7 @@ function Write-Log {
     Write-Host $line -ForegroundColor $color
     Add-Content -Path $LogFile -Value $line
 }
-function Confirm-Action { param([string]$Prompt) return ((Read-Host "$Prompt (O/N)") -match '^[OoYy]') }
+function Confirm-Action { param([string]$Prompt) return ((Read-Host "$Prompt (o/N)") -match '^[OoYy]') }
 function HtmlEnc { param($s) if($null -eq $s){return ""}; return ([System.Web.HttpUtility]::HtmlEncode([string]$s)) }
 Add-Type -AssemblyName System.Web -ErrorAction SilentlyContinue
 
@@ -217,7 +217,9 @@ $html = @"
 $html | Out-File -FilePath $reportFile -Encoding UTF8
 Write-Log "Rapport genere : $reportFile" "OK"
 Write-Log "=== Fin analyse securite ==="
-Start-Process $reportFile
 
-Write-Host "`nAnalyse terminee. Rapport ouvert dans le navigateur." -ForegroundColor Green
-Write-Host "Appuie sur Entree pour fermer..." -ForegroundColor Gray; Read-Host
+Write-Host ""
+if ((Read-Host "  Ouvrir le rapport ? (o/N)") -match '^[OoYy]') { Start-Process $reportFile }
+
+Write-Host "`nAnalyse terminee." -ForegroundColor Green
+Write-Host "Appuie sur Entree pour fermer..." -ForegroundColor Gray; Read-Host | Out-Null

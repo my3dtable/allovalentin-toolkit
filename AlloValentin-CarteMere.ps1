@@ -66,7 +66,7 @@ function Log {
     Write-Host $line -ForegroundColor $c
     Add-Content -Path $LogFile -Value $line
 }
-function Confirm-ON { param([string]$q) return ((Read-Host "$q (O/N)") -match '^[OoYy]') }
+function Confirm-ON { param([string]$q) return ((Read-Host "$q (o/N)") -match '^[OoYy]') }
 function Pause-Entree { param([string]$m = "Appuie sur Entree pour fermer...") Write-Host "`n  $m" -ForegroundColor DarkGray; try { Read-Host | Out-Null } catch {} }
 
 # ============================================================
@@ -1153,18 +1153,27 @@ if ($Mode -in @('Auto','Bios')) {
             default    { "https://$($V.DownloadPage)" -replace '^https://https://', 'https://' }
         }
     }
+    # Dernier recours, uniquement si des pilotes cles sont vraiment en retard :
+    # telechargement MANUEL des .zip depuis le site du constructeur (Cloudflare
+    # bloque les scripts), puis installation auto (extraction + pnputil, loggue,
+    # reversible). Si rien n'est en retard, on ne propose pas cette etape.
     $drvDir = "$AppDir\Drivers"
-    if (Confirm-ON "  Telecharger des pilotes depuis le site du constructeur et les installer ?") {
+    if ($anciens.Count -gt 0 -and (Confirm-ON "  Etape MANUELLE : telecharger toi-meme des .zip de pilotes depuis le site du constructeur ?")) {
         New-Item -ItemType Directory -Path $drvDir -Force | Out-Null
         try { Start-Process $navUrl } catch { Log "Ouvre a la main : $navUrl" "WARN" }
         try { Start-Process explorer.exe $drvDir } catch {}
         Write-Host ""
-        Write-Host "  1. Sur la page ouverte : telecharge les pilotes voulus (priorite : $(if ($anciens.Count) { $anciens -join ', ' } else { 'LAN, Chipset, Audio' }))." -ForegroundColor Gray
+        Write-Host "  1. Sur la page ouverte : telecharge les pilotes voulus (priorite : $($anciens -join ', '))." -ForegroundColor Gray
         Write-Host "     Pour Gigabyte : onglet 'Support' > 'Driver'. Prends la version Windows 10/11 64-bit." -ForegroundColor DarkGray
-        Write-Host "  2. Mets les fichiers .zip dans le dossier qui vient de s'ouvrir :" -ForegroundColor Gray
+        Write-Host "  2. Mets les fichiers .zip (ou .exe) dans le dossier qui vient de s'ouvrir :" -ForegroundColor Gray
         Write-Host "     $drvDir" -ForegroundColor White
-        Read-Host "  3. Entree quand les .zip (ou .exe) sont dans le dossier"
-        Install-StagedDrivers -Dir $drvDir
+        Write-Host "  3. Entree quand c'est fait - ou tape  annuler  pour passer cette etape." -ForegroundColor Gray
+        $rep = Read-Host "  >"
+        if ($rep -match '^\s*(annuler|a|non|n)\s*$') {
+            Log "Etape pilotes constructeur ignoree." "INFO"
+        } else {
+            Install-StagedDrivers -Dir $drvDir
+        }
     }
 
     # BIOS : version, age, page support, outil de flash
