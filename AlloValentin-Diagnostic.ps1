@@ -1974,21 +1974,37 @@ if ($Interactive -and $tweaksGamingAutorises) {
             Write-Host "  Gain FPS reel sur certains PC, MAIS reduit la protection contre" -ForegroundColor Yellow
             Write-Host "  les rootkits et malwares sophistiques. Ce n'est PAS un simple" -ForegroundColor Yellow
             Write-Host "  confort : c'est un compromis securite contre performance." -ForegroundColor Yellow
+            Write-Host "  RISQUE SUPPLEMENTAIRE : les anti-triche modernes (Vanguard/Valorant," -ForegroundColor Yellow
+            Write-Host "  Easy Anti-Cheat, BattlEye) verifient VBS/HVCI. Le desactiver peut" -ForegroundColor Yellow
+            Write-Host "  empecher un jeu de se lancer, provoquer un kick, voire un BANNISSEMENT" -ForegroundColor Yellow
+            Write-Host "  DE COMPTE - definitif et non indemnisable." -ForegroundColor Yellow
             Write-Host "  A n'appliquer QUE si le client a ete informe et est volontaire" -ForegroundColor Yellow
             Write-Host "  (usage competitif/esport). Necessite un redemarrage pour agir." -ForegroundColor Yellow
             Write-Host "  Reversible : Undo (menu 1 > 4) restaure la cle, puis redemarrer.`n" -ForegroundColor Gray
 
-            $confirmation = Read-Host "  Pour confirmer, tape exactement : JE CONFIRME"
-            if ($confirmation -ceq "JE CONFIRME") {
-                Apply-Tweak "VBS/Memory Integrity desactive (Competition)" `
-                    "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" `
-                    "Enabled" 0
-                Write-Log "COMPETITION : VBS/Memory Integrity desactive sur $env:COMPUTERNAME. Confirmation ecrite recue de l'operateur. Redemarrage requis pour effet." "WARN"
-                Write-Host "`n  Applique. REDEMARRE la machine pour que ca prenne effet." -ForegroundColor Green
-                Write-Host "  Pour revenir en arriere : menu 1 > 4 (Undo), puis redemarrer." -ForegroundColor Gray
+            Write-Host "  ETAPE 1/2 - Decharge de responsabilite" -ForegroundColor Cyan
+            Write-Host "  Le modele DECHARGE-CLIENT.md doit etre rempli, explique et SIGNE par" -ForegroundColor Gray
+            Write-Host "  le client AVANT cette etape (papier, 2 exemplaires). Sans decharge" -ForegroundColor Gray
+            Write-Host "  signee, le tweak ne doit pas etre applique.`n" -ForegroundColor Gray
+            $decharge = Read-Host "  La decharge est-elle remplie et signee par le client ? Tape exactement : DECHARGE SIGNEE"
+            if ($decharge -cne "DECHARGE SIGNEE") {
+                Write-Log "COMPETITION : tweak NON applique (decharge non confirmee comme signee)." "WARN"
+                Write-Host "`n  Decharge non confirmee : le tweak COMPETITION n'a PAS ete applique." -ForegroundColor Yellow
             } else {
-                Write-Log "COMPETITION : tweak VBS/Memory Integrity NON applique (confirmation ecrite absente ou incorrecte)." "WARN"
-                Write-Host "`n  Confirmation non reconnue : le tweak COMPETITION n'a PAS ete applique." -ForegroundColor Yellow
+                Write-Log "COMPETITION : decharge confirmee signee par l'operateur pour $env:COMPUTERNAME." "OK"
+                Write-Host "`n  ETAPE 2/2 - Application du tweak" -ForegroundColor Cyan
+                $confirmation = Read-Host "  Pour confirmer l'application, tape exactement : JE CONFIRME"
+                if ($confirmation -ceq "JE CONFIRME") {
+                    Apply-Tweak "VBS/Memory Integrity desactive (Competition)" `
+                        "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" `
+                        "Enabled" 0
+                    Write-Log "COMPETITION : VBS/Memory Integrity desactive sur $env:COMPUTERNAME. Decharge + confirmation ecrite recues de l'operateur. Redemarrage requis pour effet." "WARN"
+                    Write-Host "`n  Applique. REDEMARRE la machine pour que ca prenne effet." -ForegroundColor Green
+                    Write-Host "  Pour revenir en arriere : menu 1 > 4 (Undo), puis redemarrer." -ForegroundColor Gray
+                } else {
+                    Write-Log "COMPETITION : tweak VBS/Memory Integrity NON applique (confirmation ecrite absente ou incorrecte)." "WARN"
+                    Write-Host "`n  Confirmation non reconnue : le tweak COMPETITION n'a PAS ete applique." -ForegroundColor Yellow
+                }
             }
         }
 
