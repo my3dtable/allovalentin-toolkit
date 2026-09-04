@@ -377,11 +377,13 @@ $entree
         prompt = $prompt
         stream = $false
         format = "json"
-        options = @{ temperature = 0.15 }
+        # num_gpu = 0 : l'Ollama de la tour tourne sur CPU (GPU reserve aux jeux).
+        # La reformulation prend plus longtemps ; si ca depasse, on garde le texte de base.
+        options = @{ temperature = 0.15; num_gpu = 0 }
     } | ConvertTo-Json -Depth 5
 
     $r = Invoke-RestMethod -Uri "$OllamaUrl/api/generate" -Method Post -Body $payload `
-         -ContentType "application/json" -Headers $headers -TimeoutSec 240
+         -ContentType "application/json" -Headers $headers -TimeoutSec 300
     $txt = [string]$r.response
     $i = $txt.IndexOf('{'); $j = $txt.LastIndexOf('}')
     if ($i -ge 0 -and $j -gt $i) { $txt = $txt.Substring($i, $j - $i + 1) }
