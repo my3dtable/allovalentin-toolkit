@@ -63,6 +63,27 @@ if ((Test-Path $cfgFile) -and -not $NoAI) {
     } catch {}
 }
 
+# Pas de ia-client.json : passerelle IA via la cle d'intervention (cle.txt).
+# Le jeton Ollama n'est jamais depose ici : on passe par le relais
+# allovalentin.fr/api/ia qui echange la cle contre le vrai jeton, cote serveur.
+$script:ViaRelais = $false
+if (-not $Token -and -not $NoAI -and $OllamaUrl -eq "http://localhost:11434") {
+    $cleI = ""
+    foreach ($p in @((Join-Path $PSScriptRoot "cle.txt"),
+                     (Join-Path $env:LOCALAPPDATA "AlloValentin-Toolkit\cle.txt"))) {
+        if (Test-Path $p) {
+            try { $cleI = ([string](Get-Content $p -Raw)).Trim() } catch {}
+            if ($cleI) { break }
+        }
+    }
+    if ($cleI) {
+        $OllamaUrl = "https://allovalentin.fr/api/ia"
+        $Token     = $cleI
+        if ($Model -eq "llama3.2") { $Model = "qwen2.5:7b" }
+        $script:ViaRelais = $true
+    }
+}
+
 $ReportDir   = Join-Path $AppDir "Reports"
 $SnapshotDir = Join-Path $AppDir "Snapshots"
 $OutDir      = Join-Path $AppDir "Rapports-Client"
@@ -439,6 +460,16 @@ if (-not $NoAI) {
                 Warn "Reformulation Ollama refusee ($($_.Exception.Message)) - on garde le texte de base."
             }
         }
+    } elseif ($script:ViaRelais) {
+        Warn "Oups - l'IA n'est pas joignable : la tour est peut-etre eteinte ou en veille."
+        Warn "Le compte-rendu sort en modele de texte. Reveille la tour pour la version reformulee."
+        try {
+            $u = "https://allovalentin.fr/api/ia-offline?cle=" + [uri]::EscapeDataString($Token) +
+                 "&client="  + [uri]::EscapeDataString([string]$Client) +
+                 "&machine=" + [uri]::EscapeDataString([string]$fait.Machine)
+            $n = Invoke-RestMethod -Uri $u -TimeoutSec 10
+            if ($n.ok) { Info "Un message a ete envoye a contact@allovalentin.fr." }
+        } catch {}
     } else {
         Info "Ollama non joignable ($OllamaUrl) - modele de texte a trous."
     }
