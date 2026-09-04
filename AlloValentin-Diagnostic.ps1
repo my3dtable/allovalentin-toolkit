@@ -277,14 +277,17 @@ if (-not $ReportOnly -and -not $Install) {
         }
     }
     if (-not $cleOK) {
-        Write-Host "`n===============================================" -ForegroundColor Cyan
-        Write-Host "  Optimisation reservee aux interventions Allo Valentin" -ForegroundColor Cyan
-        Write-Host "===============================================" -ForegroundColor Cyan
+        Write-Host "`n===============================================" -ForegroundColor Yellow
+        Write-Host "  PAS DE CLE VALIDE -> diagnostic seul (niveau FAIBLE force)" -ForegroundColor Yellow
+        Write-Host "===============================================" -ForegroundColor Yellow
         Write-Host "  Le diagnostic complet ci-dessous est GRATUIT." -ForegroundColor Gray
-        Write-Host "  L'optimisation (nettoyage + reglages, entierement reversible)" -ForegroundColor Gray
-        Write-Host "  se fait avec la cle remise lors d'une intervention :" -ForegroundColor Gray
+        Write-Host "  Sans cle, le menu de choix du niveau (Faible/Gaming/Extreme/Competition)" -ForegroundColor Gray
+        Write-Host "  ne s'affiche PAS : aucun tweak ne peut de toute facon etre applique." -ForegroundColor Gray
+        Write-Host "  L'optimisation se debloque avec la cle remise lors d'une intervention :" -ForegroundColor Gray
         Write-Host "    Allo Valentin  -  https://allovalentin.fr  -  07 55 53 08 67" -ForegroundColor White
+        Write-Host "  Pour tester toi-meme en local, relance avec : -Cle `"TA_CLE`"" -ForegroundColor Cyan
         Write-Host ""
+        Read-Host "  Appuie sur Entree pour continuer en diagnostic seul (ou Ctrl+C pour annuler et relancer avec -Cle)" | Out-Null
         $ReportOnly = $true
         Write-Log "Pas de cle d'intervention valide -> diagnostic seul (ReportOnly force)." "WARN"
     } else {
