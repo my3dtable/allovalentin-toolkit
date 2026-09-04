@@ -298,30 +298,39 @@ Write-Log "=== Debut diagnostic complet (Interactive: $Interactive) ==="
 # ============================================================
 #  NIVEAU D'OPTIMISATION (menu interactif, defaut = Faible)
 # ============================================================
-# Faible   : diagnostic + actions 100% sures (nettoyage, demarrage, residus, doublons). AUCUN tweak systeme.
-# Gaming   : Faible + tweaks reversibles surs (plan alim, Game DVR, HAGS, MSI Mode, effets visuels).
-# Extreme  : Gaming + tweaks agressifs (core parking, reseau Nagle/throttling).
+# Faible      : diagnostic + actions 100% sures (nettoyage, demarrage, residus, doublons). AUCUN tweak systeme.
+# Gaming      : Faible + tweaks reversibles surs (plan alim, Game DVR, HAGS, MSI Mode, effets visuels).
+# Extreme     : Gaming + tweaks agressifs (core parking, reseau Nagle/throttling).
+# Competition : Extreme + desactivation d'une protection de securite Windows (VBS/Memory Integrity)
+#               pour un gain FPS mesurable sur certains PC. PAS un tweak de confort : ca reduit la
+#               protection contre les rootkits. Reserve a un client informe et volontaire (esport/
+#               competitif). Confirmation ecrite obligatoire, tracee dans le log. Voir DECHARGE-CLIENT.md.
 $niveau = "Faible"   # defaut si non interactif ou choix vide
 if ($Interactive) {
     Write-Host "`n===============================================" -ForegroundColor Cyan
     Write-Host "  ALLO VALENTIN - Niveau d'optimisation" -ForegroundColor Cyan
     Write-Host "===============================================" -ForegroundColor Cyan
-    Write-Host "  1. FAIBLE   - Diagnostic + nettoyage sur (aucune modif systeme)" -ForegroundColor Green
-    Write-Host "  2. GAMING   - Faible + tweaks surs et reversibles (plan alim, Game DVR, HAGS, MSI)" -ForegroundColor Yellow
-    Write-Host "  3. EXTREME  - Gaming + tweaks agressifs en plus (core parking, reseau)" -ForegroundColor Red
+    Write-Host "  1. FAIBLE      - Diagnostic + nettoyage sur (aucune modif systeme)" -ForegroundColor Green
+    Write-Host "  2. GAMING      - Faible + tweaks surs et reversibles (plan alim, Game DVR, HAGS, MSI)" -ForegroundColor Yellow
+    Write-Host "  3. EXTREME     - Gaming + tweaks agressifs en plus (core parking, reseau)" -ForegroundColor Red
+    Write-Host "  4. COMPETITION - Extreme + desactive une protection de securite Windows (VBS/Memory" -ForegroundColor Magenta
+    Write-Host "                   Integrity) pour un gain FPS mesurable. Reduit la securite. Client" -ForegroundColor Magenta
+    Write-Host "                   informe et consentant uniquement - confirmation ecrite exigee." -ForegroundColor Magenta
     Write-Host "  (Entree = FAIBLE par defaut)`n" -ForegroundColor Gray
-    $choix = Read-Host "Choix (1/2/3)"
+    $choix = Read-Host "Choix (1/2/3/4)"
     switch ($choix) {
         "2" { $niveau = "Gaming" }
         "3" { $niveau = "Extreme" }
+        "4" { $niveau = "Competition" }
         default { $niveau = "Faible" }
     }
     Write-Host "Niveau selectionne : $($niveau.ToUpper())`n" -ForegroundColor Cyan
 }
 Write-Log "Niveau d'optimisation : $($niveau.ToUpper())" "OK"
 # Aides de decision : quel niveau autorise quoi
-$tweaksGamingAutorises  = ($niveau -eq "Gaming" -or $niveau -eq "Extreme")
-$tweaksExtremeAutorises = ($niveau -eq "Extreme")
+$tweaksGamingAutorises      = ($niveau -eq "Gaming" -or $niveau -eq "Extreme" -or $niveau -eq "Competition")
+$tweaksExtremeAutorises     = ($niveau -eq "Extreme" -or $niveau -eq "Competition")
+$tweaksCompetitionAutorises = ($niveau -eq "Competition")
 
 # ============================================================
 #  OUTILS TIERS via winget (portables/fiables)
@@ -1945,6 +1954,39 @@ if ($Interactive -and $tweaksGamingAutorises) {
                 $script:tweaksApplied += "RSS reseau active - Core 0 desengorge (Extreme)"
                 Write-Log "RSS active (charge reseau repartie sur plusieurs coeurs)." "OK"
             } catch { Write-Log "RSS : $_" "WARN" }
+        }
+
+        # --- Tweak COMPETITION uniquement : reduit une protection de securite Windows ---
+        # (VBS / Memory Integrity). PAS un tweak de confort comme les autres : ca coupe une
+        # defense contre les rootkits/malwares sophistiques pour un gain FPS mesurable sur
+        # certains PC. Reversible via Undo + reboot, mais ce n'est PAS anodin. On exige donc
+        # une confirmation ECRITE distincte (pas juste o/N) et on trace tout dans le log,
+        # avec la machine et l'heure : c'est la preuve que Valentin a choisi cette action en
+        # connaissance de cause pour ce client precis (voir DECHARGE-CLIENT.md).
+        if ($tweaksCompetitionAutorises) {
+            Write-Host "`n===============================================" -ForegroundColor Magenta
+            Write-Host "  NIVEAU COMPETITION - Reduction de securite Windows" -ForegroundColor Magenta
+            Write-Host "===============================================" -ForegroundColor Magenta
+            Write-Host "  Ce tweak desactive VBS / Memory Integrity (Isolation du noyau)." -ForegroundColor Yellow
+            Write-Host "  Gain FPS reel sur certains PC, MAIS reduit la protection contre" -ForegroundColor Yellow
+            Write-Host "  les rootkits et malwares sophistiques. Ce n'est PAS un simple" -ForegroundColor Yellow
+            Write-Host "  confort : c'est un compromis securite contre performance." -ForegroundColor Yellow
+            Write-Host "  A n'appliquer QUE si le client a ete informe et est volontaire" -ForegroundColor Yellow
+            Write-Host "  (usage competitif/esport). Necessite un redemarrage pour agir." -ForegroundColor Yellow
+            Write-Host "  Reversible : Undo (menu 1 > 4) restaure la cle, puis redemarrer.`n" -ForegroundColor Gray
+
+            $confirmation = Read-Host "  Pour confirmer, tape exactement : JE CONFIRME"
+            if ($confirmation -ceq "JE CONFIRME") {
+                Apply-Tweak "VBS/Memory Integrity desactive (Competition)" `
+                    "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" `
+                    "Enabled" 0
+                Write-Log "COMPETITION : VBS/Memory Integrity desactive sur $env:COMPUTERNAME. Confirmation ecrite recue de l'operateur. Redemarrage requis pour effet." "WARN"
+                Write-Host "`n  Applique. REDEMARRE la machine pour que ca prenne effet." -ForegroundColor Green
+                Write-Host "  Pour revenir en arriere : menu 1 > 4 (Undo), puis redemarrer." -ForegroundColor Gray
+            } else {
+                Write-Log "COMPETITION : tweak VBS/Memory Integrity NON applique (confirmation ecrite absente ou incorrecte)." "WARN"
+                Write-Host "`n  Confirmation non reconnue : le tweak COMPETITION n'a PAS ete applique." -ForegroundColor Yellow
+            }
         }
 
         Write-Log "$($script:tweaksApplied.Count) tweaks appliques. Backup: $tweakBackup" "OK"
