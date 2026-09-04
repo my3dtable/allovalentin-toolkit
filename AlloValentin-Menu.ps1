@@ -14,13 +14,30 @@
     A executer en Administrateur (auto-elevation incluse).
 #>
 
-# --- Auto-elevation ---
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    try { Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs } catch {}
-    exit
-}
+param(
+    [string]$Cle = ""   # cle d'intervention : transmise aux outils, jamais laissee sur disque
+)
 
 $base        = Split-Path -Parent $PSCommandPath
+
+# Cle d'intervention : le lanceur web (opti.ps1) la depose dans cle.txt le temps
+# de passer l'elevation. On la lit une fois, on la garde en memoire, et on
+# supprime le fichier tout de suite : rien ne reste en clair sur la machine.
+if (-not $Cle) {
+    $cleFichier = Join-Path $base "cle.txt"
+    if (Test-Path $cleFichier) {
+        try { $Cle = ([string](Get-Content $cleFichier -Raw -ErrorAction Stop)).Trim() } catch {}
+        Remove-Item $cleFichier -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# --- Auto-elevation ---
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    $relance = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    if ($Cle) { $relance += " -Cle `"$Cle`"" }
+    try { Start-Process powershell.exe -ArgumentList $relance -Verb RunAs } catch {}
+    exit
+}
 $scriptDiag  = Join-Path $base "AlloValentin-Diagnostic.ps1"
 $scriptSecu  = Join-Path $base "AlloValentin-Securite.ps1"
 $scriptVerif = Join-Path $base "AlloValentin-Verif.ps1"
@@ -29,6 +46,9 @@ $scriptFluid = Join-Path $base "AlloValentin-Fluidite.ps1"
 $scriptCarte = Join-Path $base "AlloValentin-CarteMere.ps1"
 $scriptJeux  = Join-Path $base "AlloValentin-Jeux.ps1"
 $scriptRapport = Join-Path $base "AlloValentin-RapportClient.ps1"
+
+# Argument cle a passer aux outils qui en ont besoin (optimisation, compte-rendu IA)
+$argCle = @(); if ($Cle) { $argCle = @('-Cle', $Cle) }
 
 function Show-Header {
     Clear-Host
@@ -77,6 +97,7 @@ function Sous-Menu {
 #  BOUCLE PRINCIPALE
 # ============================================================
 $continuer = $true
+try {
 while ($continuer) {
     Show-Header
     Write-Host "  Que veux-tu faire ?`n" -ForegroundColor White
@@ -108,9 +129,9 @@ while ($continuer) {
                 "1" = @{ Label = "Rapport seul (ne modifie rien)"
                          Action = { Invoke-Outil $scriptDiag "Rapport seul" @('-ReportOnly') } }
                 "2" = @{ Label = "Optimiser (tweaks - 3 niveaux : Faible / Medium / Extreme)"
-                         Action = { Invoke-Outil $scriptDiag "Diagnostic & optimisation" } }
+                         Action = { Invoke-Outil $scriptDiag "Diagnostic & optimisation" $argCle } }
                 "3" = @{ Label = "Optimiser en mode RAPIDE (saute sfc/DISM : < 1 min au lieu de 3-8)"
-                         Action = { Invoke-Outil $scriptDiag "Diagnostic rapide" @('-Fast') } }
+                         Action = { Invoke-Outil $scriptDiag "Diagnostic rapide" (@('-Fast') + $argCle) } }
                 "4" = @{ Label = "Annuler l'optimisation (Undo)"
                          Action = { Invoke-Outil $scriptDiag "Annulation (Undo)" @('-Undo') } }
             }
@@ -144,9 +165,9 @@ while ($continuer) {
         "6" {
             Sous-Menu "Compte-rendu client" @{
                 "1" = @{ Label = "Generer (langage client, avec devis)"
-                         Action = { Invoke-Outil $scriptRapport "Compte-rendu client" @('-Devis','-Ouvrir') } }
+                         Action = { Invoke-Outil $scriptRapport "Compte-rendu client" (@('-Devis','-Ouvrir') + $argCle) } }
                 "2" = @{ Label = "Generer sans devis"
-                         Action = { Invoke-Outil $scriptRapport "Compte-rendu client" @('-Ouvrir') } }
+                         Action = { Invoke-Outil $scriptRapport "Compte-rendu client" (@('-Ouvrir') + $argCle) } }
             }
         }
         "Q" { $continuer = $false }
@@ -155,6 +176,12 @@ while ($continuer) {
             Start-Sleep -Seconds 1
         }
     }
+}
+}
+finally {
+    # Ne jamais laisser la cle d'intervention sur la machine.
+    $cf = Join-Path $base "cle.txt"
+    if (Test-Path $cf) { Remove-Item $cf -Force -ErrorAction SilentlyContinue }
 }
 
 Show-Header

@@ -44,7 +44,8 @@ param(
     [switch]$NoAI,
     [switch]$Devis,
     [int]$TauxHoraire   = 50,
-    [switch]$Ouvrir
+    [switch]$Ouvrir,
+    [string]$Cle        = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,12 +69,14 @@ if ((Test-Path $cfgFile) -and -not $NoAI) {
 # allovalentin.fr/api/ia qui echange la cle contre le vrai jeton, cote serveur.
 $script:ViaRelais = $false
 if (-not $Token -and -not $NoAI -and $OllamaUrl -eq "http://localhost:11434") {
-    $cleI = ""
-    foreach ($p in @((Join-Path $PSScriptRoot "cle.txt"),
-                     (Join-Path $env:LOCALAPPDATA "AlloValentin-Toolkit\cle.txt"))) {
-        if (Test-Path $p) {
-            try { $cleI = ([string](Get-Content $p -Raw)).Trim() } catch {}
-            if ($cleI) { break }
+    $cleI = $Cle
+    if (-not $cleI) {
+        foreach ($p in @((Join-Path $PSScriptRoot "cle.txt"),
+                         (Join-Path $env:LOCALAPPDATA "AlloValentin-Toolkit\cle.txt"))) {
+            if (Test-Path $p) {
+                try { $cleI = ([string](Get-Content $p -Raw)).Trim() } catch {}
+                if ($cleI) { break }
+            }
         }
     }
     if ($cleI) {
