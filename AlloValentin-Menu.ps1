@@ -66,7 +66,7 @@ function Show-Header {
 }
 
 function Invoke-Outil {
-    param([string]$Path, [string]$Nom, [string[]]$ScriptArgs = @())
+    param([string]$Path, [string]$Nom, [string[]]$ScriptArgs = @(), [switch]$NoPause)
     if (-not (Test-Path $Path)) {
         Write-Host "`n  [ERREUR] $Nom introuvable :" -ForegroundColor Red
         Write-Host "           $Path" -ForegroundColor DarkGray
@@ -75,22 +75,25 @@ function Invoke-Outil {
         Write-Host "`n  Lancement : $Nom..." -ForegroundColor Green
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Path @ScriptArgs
     }
-    Write-Host "`n  Retour au menu. Appuie sur Entree..." -ForegroundColor Gray; Read-Host | Out-Null
+    if (-not $NoPause) { Write-Host "`n  Retour au menu. Appuie sur Entree..." -ForegroundColor Gray; Read-Host | Out-Null }
 }
 
 function Sous-Menu {
     param([string]$Titre, [hashtable]$Choix)  # Choix : cle -> @{ Label; Action(scriptblock) }
-    Show-Header
-    Write-Host "  $Titre`n" -ForegroundColor White
-    foreach ($k in ($Choix.Keys | Sort-Object)) {
-        Write-Host "    $k. " -ForegroundColor Cyan -NoNewline; Write-Host $Choix[$k].Label -ForegroundColor White
+    while ($true) {
+        Show-Header
+        Write-Host "  $Titre`n" -ForegroundColor White
+        foreach ($k in ($Choix.Keys | Sort-Object)) {
+            Write-Host "    $k. " -ForegroundColor Cyan -NoNewline; Write-Host $Choix[$k].Label -ForegroundColor White
+        }
+        Write-Host "    R. " -ForegroundColor Cyan -NoNewline; Write-Host "Retour" -ForegroundColor White
+        Write-Host ""
+        $c = (Read-Host "  Ton choix").ToUpper().Trim()
+        if ($c -eq 'R') { return }
+        if ($Choix.ContainsKey($c)) { & $Choix[$c].Action; return }
+        Write-Host "`n  Choix invalide - tape une des lettres/chiffres proposes." -ForegroundColor Yellow
+        Start-Sleep 1
     }
-    Write-Host "    R. " -ForegroundColor Cyan -NoNewline; Write-Host "Retour" -ForegroundColor White
-    Write-Host ""
-    $c = (Read-Host "  Ton choix").ToUpper().Trim()
-    if ($c -eq 'R') { return }
-    if ($Choix.ContainsKey($c)) { & $Choix[$c].Action }
-    else { Write-Host "`n  Choix invalide." -ForegroundColor Yellow; Start-Sleep 1 }
 }
 
 # ============================================================
@@ -139,7 +142,7 @@ while ($continuer) {
         "2" {
             Sous-Menu "Preuve avant / apres  (suivre l'ordre du protocole)" @{
                 "1" = @{ Label = "AVANT  - etat machine + perfs  (avant les tweaks)"
-                         Action = { Invoke-Outil $scriptVerif "Verif -Avant" @('-Avant'); Invoke-Outil $scriptPerf "Perf -Avant" @('-Avant') } }
+                         Action = { Invoke-Outil $scriptVerif "Verif -Avant" @('-Avant') -NoPause; Invoke-Outil $scriptPerf "Perf -Avant" @('-Avant') } }
                 "2" = @{ Label = "Perf APRES  (a faire AVANT l'Undo)"
                          Action = { Invoke-Outil $scriptPerf "Perf -Apres" @('-Apres') } }
                 "3" = @{ Label = "Verif APRES  (a faire APRES l'Undo - verdict retour etat initial)"
