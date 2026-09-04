@@ -1971,9 +1971,12 @@ if ($Interactive -and $tweaksGamingAutorises) {
             Write-Host "  NIVEAU COMPETITION - Reduction de securite Windows" -ForegroundColor Magenta
             Write-Host "===============================================" -ForegroundColor Magenta
             Write-Host "  Ce tweak desactive VBS / Memory Integrity (Isolation du noyau)." -ForegroundColor Yellow
-            Write-Host "  Gain FPS reel sur certains PC, MAIS reduit la protection contre" -ForegroundColor Yellow
-            Write-Host "  les rootkits et malwares sophistiques. Ce n'est PAS un simple" -ForegroundColor Yellow
-            Write-Host "  confort : c'est un compromis securite contre performance." -ForegroundColor Yellow
+            Write-Host "  Gain mesure (benchmarks tiers) : ~5-8% de FPS moyen, et surtout" -ForegroundColor Yellow
+            Write-Host "  15-25% de mieux sur les 1% low (moins de micro-saccades) sur les CPU" -ForegroundColor Yellow
+            Write-Host "  fortement sollicites. Variable selon le PC, jamais garanti." -ForegroundColor Yellow
+            Write-Host "  Ce gain reduit la protection contre les rootkits et malwares" -ForegroundColor Yellow
+            Write-Host "  sophistiques. Ce n'est PAS un simple confort : c'est un compromis" -ForegroundColor Yellow
+            Write-Host "  securite contre performance." -ForegroundColor Yellow
             Write-Host "  RISQUE SUPPLEMENTAIRE : les anti-triche modernes (Vanguard/Valorant," -ForegroundColor Yellow
             Write-Host "  Easy Anti-Cheat, BattlEye) verifient VBS/HVCI. Le desactiver peut" -ForegroundColor Yellow
             Write-Host "  empecher un jeu de se lancer, provoquer un kick, voire un BANNISSEMENT" -ForegroundColor Yellow
