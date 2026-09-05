@@ -388,12 +388,38 @@ if ($Interactive) {
 
     $niveau = if ($cleOK) { $niveauDemande } else { "Faible" }
     Write-Log "Niveau demande : $($niveauDemande.ToUpper()) / cle valide : $cleOK" "INFO"
-    Write-Host "Niveau selectionne : $($niveau.ToUpper())`n" -ForegroundColor Cyan
+
+    # COMPETITION : la decharge signee + la confirmation ecrite sont demandees ICI,
+    # des le choix du niveau (avant tout le reste). Si l'operateur ne confirme pas
+    # exactement, on bascule sur EXTREME et le tweak VBS ne sera pas propose plus loin.
     if ($niveau -eq "Competition") {
         Show-CompetitionWarning
-        Write-Host "  (Ce niveau redemandera une decharge signee + une confirmation ecrite" -ForegroundColor Gray
-        Write-Host "  juste avant l'application reelle du tweak, plus loin dans le script.)`n" -ForegroundColor Gray
+        Write-Host "  ETAPE 1/2 - Decharge de responsabilite" -ForegroundColor Cyan
+        Write-Host "  Le modele DECHARGE-CLIENT.md doit etre rempli, explique et SIGNE par le" -ForegroundColor Gray
+        Write-Host "  client AVANT de continuer (papier, 2 exemplaires). Sans decharge signee," -ForegroundColor Gray
+        Write-Host "  ce niveau bascule automatiquement sur EXTREME.`n" -ForegroundColor Gray
+        $decharge = Read-Host "  La decharge est-elle remplie et signee par le client ? Tape exactement : DECHARGE SIGNEE"
+        if ($decharge -cne "DECHARGE SIGNEE") {
+            $niveau = "Extreme"
+            Write-Log "COMPETITION refuse (decharge non confirmee comme signee) -> bascule sur EXTREME." "WARN"
+            Write-Host "`n  Decharge non confirmee -> niveau EXTREME retenu. Le tweak VBS/Memory" -ForegroundColor Yellow
+            Write-Host "  Integrity ne sera PAS applique.`n" -ForegroundColor Yellow
+        } else {
+            Write-Host "`n  ETAPE 2/2 - Confirmation d'application" -ForegroundColor Cyan
+            $confirmation = Read-Host "  Pour confirmer la desactivation de VBS/Memory Integrity, tape exactement : JE CONFIRME"
+            if ($confirmation -cne "JE CONFIRME") {
+                $niveau = "Extreme"
+                Write-Log "COMPETITION refuse (confirmation ecrite absente ou incorrecte) -> bascule sur EXTREME." "WARN"
+                Write-Host "`n  Confirmation non reconnue -> niveau EXTREME retenu. Le tweak VBS ne sera" -ForegroundColor Yellow
+                Write-Host "  PAS applique.`n" -ForegroundColor Yellow
+            } else {
+                Write-Log "COMPETITION confirme (decharge + confirmation ecrite) au demarrage pour $env:COMPUTERNAME." "OK"
+                Write-Host "`n  Decharge + confirmation OK. Le tweak VBS/Memory Integrity sera applique" -ForegroundColor Green
+                Write-Host "  avec les autres tweaks (redemarrage requis ensuite).`n" -ForegroundColor Green
+            }
+        }
     }
+    Write-Host "Niveau retenu : $($niveau.ToUpper())`n" -ForegroundColor Cyan
 }
 Write-Log "Niveau d'optimisation : $($niveau.ToUpper())" "OK"
 # Aides de decision : quel niveau autorise quoi
@@ -2026,38 +2052,19 @@ if ($Interactive -and $tweaksGamingAutorises) {
         }
 
         # --- Tweak COMPETITION uniquement : reduit une protection de securite Windows ---
-        # (VBS / Memory Integrity). PAS un tweak de confort comme les autres : ca coupe une
-        # defense contre les rootkits/malwares sophistiques pour un gain FPS mesurable sur
-        # certains PC. Reversible via Undo + reboot, mais ce n'est PAS anodin. On exige donc
-        # une confirmation ECRITE distincte (pas juste o/N) et on trace tout dans le log,
-        # avec la machine et l'heure : c'est la preuve que Valentin a choisi cette action en
-        # connaissance de cause pour ce client precis (voir DECHARGE-CLIENT.md).
+        # (VBS / Memory Integrity). La decharge signee + la confirmation ecrite ont deja
+        # ete demandees AU DEBUT du script (juste apres le choix du niveau 4). Si l'operateur
+        # n'avait pas confirme, $niveau serait passe a "Extreme" et on n'arriverait pas ici.
+        # Reversible via Undo + reboot (Apply-Tweak fait le backup .reg + le manifeste).
         if ($tweaksCompetitionAutorises) {
-            Show-CompetitionWarning
-            Write-Host "  ETAPE 1/2 - Decharge de responsabilite" -ForegroundColor Cyan
-            Write-Host "  Le modele DECHARGE-CLIENT.md doit etre rempli, explique et SIGNE par" -ForegroundColor Gray
-            Write-Host "  le client AVANT cette etape (papier, 2 exemplaires). Sans decharge" -ForegroundColor Gray
-            Write-Host "  signee, le tweak ne doit pas etre applique.`n" -ForegroundColor Gray
-            $decharge = Read-Host "  La decharge est-elle remplie et signee par le client ? Tape exactement : DECHARGE SIGNEE"
-            if ($decharge -cne "DECHARGE SIGNEE") {
-                Write-Log "COMPETITION : tweak NON applique (decharge non confirmee comme signee)." "WARN"
-                Write-Host "`n  Decharge non confirmee : le tweak COMPETITION n'a PAS ete applique." -ForegroundColor Yellow
-            } else {
-                Write-Log "COMPETITION : decharge confirmee signee par l'operateur pour $env:COMPUTERNAME." "OK"
-                Write-Host "`n  ETAPE 2/2 - Application du tweak" -ForegroundColor Cyan
-                $confirmation = Read-Host "  Pour confirmer l'application, tape exactement : JE CONFIRME"
-                if ($confirmation -ceq "JE CONFIRME") {
-                    Apply-Tweak "VBS/Memory Integrity desactive (Competition)" `
-                        "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" `
-                        "Enabled" 0
-                    Write-Log "COMPETITION : VBS/Memory Integrity desactive sur $env:COMPUTERNAME. Decharge + confirmation ecrite recues de l'operateur. Redemarrage requis pour effet." "WARN"
-                    Write-Host "`n  Applique. REDEMARRE la machine pour que ca prenne effet." -ForegroundColor Green
-                    Write-Host "  Pour revenir en arriere : menu 1 > 4 (Undo), puis redemarrer." -ForegroundColor Gray
-                } else {
-                    Write-Log "COMPETITION : tweak VBS/Memory Integrity NON applique (confirmation ecrite absente ou incorrecte)." "WARN"
-                    Write-Host "`n  Confirmation non reconnue : le tweak COMPETITION n'a PAS ete applique." -ForegroundColor Yellow
-                }
-            }
+            Write-Host "`n=== Tweak COMPETITION : desactivation VBS / Memory Integrity ===" -ForegroundColor Magenta
+            Write-Host "  Decharge signee + confirmation ecrite deja validees au demarrage." -ForegroundColor Gray
+            Apply-Tweak "VBS/Memory Integrity desactive (Competition)" `
+                "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" `
+                "Enabled" 0
+            Write-Log "COMPETITION : VBS/Memory Integrity desactive sur $env:COMPUTERNAME. Decharge + confirmation ecrite recues au demarrage. Redemarrage requis pour effet." "WARN"
+            Write-Host "`n  Applique. REDEMARRE la machine pour que ca prenne effet." -ForegroundColor Green
+            Write-Host "  Pour revenir en arriere : menu 1 > 4 (Undo), puis redemarrer." -ForegroundColor Gray
         }
 
         Write-Log "$($script:tweaksApplied.Count) tweaks appliques. Backup: $tweakBackup" "OK"
