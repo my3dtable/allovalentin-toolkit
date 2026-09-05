@@ -36,18 +36,39 @@ param(
 # --- Auto-elevation : si pas admin, on relance le script en admin automatiquement ---
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "Droits administrateur requis. Relancement en mode Administrateur..." -ForegroundColor Yellow
-    # On retransmet les parametres au script relance
-    $argList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-    if ($Install)    { $argList += " -Install" }
-    if ($ReportOnly) { $argList += " -ReportOnly" }
-    if ($SkipTools)  { $argList += " -SkipTools" }
-    if ($Undo)       { $argList += " -Undo" }
-    if ($Fast)       { $argList += " -Fast" }
-    if ($Cle)        { $argList += " -Cle `"$Cle`"" }
-    try {
-        Start-Process powershell.exe -ArgumentList $argList -Verb RunAs
-    } catch {
-        Write-Host "Elevation refusee ou annulee. Le script a besoin des droits admin pour fonctionner." -ForegroundColor Red
+    if ($PSCommandPath) {
+        # Script lance depuis un fichier local (ex: tache planifiee) -> on relance ce fichier
+        $argList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+        if ($Install)    { $argList += " -Install" }
+        if ($ReportOnly) { $argList += " -ReportOnly" }
+        if ($SkipTools)  { $argList += " -SkipTools" }
+        if ($Undo)       { $argList += " -Undo" }
+        if ($Fast)       { $argList += " -Fast" }
+        if ($Cle)        { $argList += " -Cle `"$Cle`"" }
+        try {
+            Start-Process powershell.exe -ArgumentList $argList -Verb RunAs
+        } catch {
+            Write-Host "Elevation refusee ou annulee. Le script a besoin des droits admin pour fonctionner." -ForegroundColor Red
+        }
+    } else {
+        # Lance via "irm https://allovalentin.fr/opti.ps1 | iex" -> pas de fichier local,
+        # $PSCommandPath est vide. On reconstruit un appel autonome qui re-telecharge le
+        # script dans le processus eleve, encode en Base64 pour eviter tout probleme de
+        # guillemets/quoting entre les deux fenetres PowerShell.
+        $DistUrl = "https://allovalentin.fr/opti.ps1"
+        $inner = "& { `$(irm '$DistUrl') }"
+        if ($Install)    { $inner += " -Install" }
+        if ($ReportOnly) { $inner += " -ReportOnly" }
+        if ($SkipTools)  { $inner += " -SkipTools" }
+        if ($Undo)       { $inner += " -Undo" }
+        if ($Fast)       { $inner += " -Fast" }
+        if ($Cle)        { $inner += " -Cle '$($Cle -replace "'", "''")'" }
+        $encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($inner))
+        try {
+            Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded" -Verb RunAs
+        } catch {
+            Write-Host "Elevation refusee ou annulee. Le script a besoin des droits admin pour fonctionner." -ForegroundColor Red
+        }
     }
     exit
 }
@@ -255,9 +276,13 @@ if ($Undo) {
 # ============================================================
 #  CLE D'INTERVENTION
 #  L'optimisation (nettoyage + reglages, reversible) est reservee aux
-#  interventions Allo Valentin. Sans cle valide, le script produit
-#  uniquement le diagnostic (gratuit, lecture seule).
+#  interventions Allo Valentin. On verifie une cle deja fournie
+#  (-Cle ou cle.txt) en silence ici ; si aucune n'est valide, le menu
+#  de niveau ci-dessous grise Gaming/Extreme/Competition et ne
+#  demandera la cle que si l'un de ces niveaux est choisi. FAIBLE
+#  (diagnostic gratuit) reste toujours accessible sans cle.
 # ============================================================
+$cleOK = $false
 if (-not $ReportOnly -and -not $Install) {
     if (-not $Cle) {
         $cleFile = Join-Path (Split-Path -Parent $PSCommandPath) 'cle.txt'
@@ -265,7 +290,6 @@ if (-not $ReportOnly -and -not $Install) {
             try { $Cle = ([string](Get-Content $cleFile -Raw -ErrorAction Stop)).Trim() } catch {}
         }
     }
-    $cleOK = $false
     if ($Cle) {
         try {
             $u = "https://allovalentin.fr/api/check?cle=" + [uri]::EscapeDataString($Cle)
@@ -273,26 +297,9 @@ if (-not $ReportOnly -and -not $Install) {
             $cleOK = [bool]$rep.ok
         } catch {
             $cleOK = $false
-            Write-Host "`n  Verification de la cle impossible (pas de connexion Internet ?)." -ForegroundColor Yellow
         }
     }
-    if (-not $cleOK) {
-        Write-Host "`n===============================================" -ForegroundColor Yellow
-        Write-Host "  PAS DE CLE VALIDE -> diagnostic seul (niveau FAIBLE force)" -ForegroundColor Yellow
-        Write-Host "===============================================" -ForegroundColor Yellow
-        Write-Host "  Le diagnostic complet ci-dessous est GRATUIT." -ForegroundColor Gray
-        Write-Host "  Sans cle, le menu de choix du niveau (Faible/Gaming/Extreme/Competition)" -ForegroundColor Gray
-        Write-Host "  ne s'affiche PAS : aucun tweak ne peut de toute facon etre applique." -ForegroundColor Gray
-        Write-Host "  L'optimisation se debloque avec la cle remise lors d'une intervention :" -ForegroundColor Gray
-        Write-Host "    Allo Valentin  -  https://allovalentin.fr  -  07 55 53 08 67" -ForegroundColor White
-        Write-Host "  Pour tester toi-meme en local, relance avec : -Cle `"TA_CLE`"" -ForegroundColor Cyan
-        Write-Host ""
-        Read-Host "  Appuie sur Entree pour continuer en diagnostic seul (ou Ctrl+C pour annuler et relancer avec -Cle)" | Out-Null
-        $ReportOnly = $true
-        Write-Log "Pas de cle d'intervention valide -> diagnostic seul (ReportOnly force)." "WARN"
-    } else {
-        Write-Log "Cle d'intervention validee -> optimisation autorisee." "OK"
-    }
+    Write-Log "Cle d'intervention au demarrage : $(if ($cleOK) { 'validee' } else { 'absente ou invalide' })." $(if ($cleOK) { "OK" } else { "INFO" })
 }
 
 $Interactive = -not $ReportOnly
@@ -313,20 +320,55 @@ if ($Interactive) {
     Write-Host "`n===============================================" -ForegroundColor Cyan
     Write-Host "  ALLO VALENTIN - Niveau d'optimisation" -ForegroundColor Cyan
     Write-Host "===============================================" -ForegroundColor Cyan
+    $cGaming = if ($cleOK) { "Yellow" } else { "DarkGray" }
+    $cExtreme = if ($cleOK) { "Red" } else { "DarkGray" }
+    $cComp = if ($cleOK) { "Magenta" } else { "DarkGray" }
+    $tagCle = if ($cleOK) { "" } else { " [cle requise]" }
     Write-Host "  1. FAIBLE      - Diagnostic + nettoyage sur (aucune modif systeme)" -ForegroundColor Green
-    Write-Host "  2. GAMING      - Faible + tweaks surs et reversibles (plan alim, Game DVR, HAGS, MSI)" -ForegroundColor Yellow
-    Write-Host "  3. EXTREME     - Gaming + tweaks agressifs en plus (core parking, reseau)" -ForegroundColor Red
-    Write-Host "  4. COMPETITION - Extreme + desactive une protection de securite Windows (VBS/Memory" -ForegroundColor Magenta
-    Write-Host "                   Integrity) pour un gain FPS mesurable. Reduit la securite. Client" -ForegroundColor Magenta
-    Write-Host "                   informe et consentant uniquement - confirmation ecrite exigee." -ForegroundColor Magenta
+    Write-Host "  2. GAMING      - Faible + tweaks surs et reversibles (plan alim, Game DVR, HAGS, MSI)$tagCle" -ForegroundColor $cGaming
+    Write-Host "  3. EXTREME     - Gaming + tweaks agressifs en plus (core parking, reseau)$tagCle" -ForegroundColor $cExtreme
+    Write-Host "  4. COMPETITION - Extreme + desactive une protection de securite Windows (VBS/Memory$tagCle" -ForegroundColor $cComp
+    Write-Host "                   Integrity) pour un gain FPS mesurable. Reduit la securite. Client" -ForegroundColor $cComp
+    Write-Host "                   informe et consentant uniquement - confirmation ecrite exigee." -ForegroundColor $cComp
+    if (-not $cleOK) {
+        Write-Host "  (2/3/4 grises : cle d'intervention requise, elle sera demandee si tu les choisis)" -ForegroundColor DarkGray
+    }
     Write-Host "  (Entree = FAIBLE par defaut)`n" -ForegroundColor Gray
     $choix = Read-Host "Choix (1/2/3/4)"
-    switch ($choix) {
-        "2" { $niveau = "Gaming" }
-        "3" { $niveau = "Extreme" }
-        "4" { $niveau = "Competition" }
-        default { $niveau = "Faible" }
+    $niveauDemande = switch ($choix) {
+        "2" { "Gaming" }
+        "3" { "Extreme" }
+        "4" { "Competition" }
+        default { "Faible" }
     }
+
+    if ($niveauDemande -ne "Faible" -and -not $cleOK) {
+        Write-Host "`n===============================================" -ForegroundColor Yellow
+        Write-Host "  CLE D'INTERVENTION REQUISE POUR CE NIVEAU" -ForegroundColor Yellow
+        Write-Host "===============================================" -ForegroundColor Yellow
+        Write-Host "    Allo Valentin  -  https://allovalentin.fr  -  07 55 53 08 67" -ForegroundColor White
+        $cleSaisie = (Read-Host "  Tape ta cle d'intervention (ou Entree pour rester en FAIBLE)").Trim()
+        if ($cleSaisie) {
+            try {
+                $u2 = "https://allovalentin.fr/api/check?cle=" + [uri]::EscapeDataString($cleSaisie)
+                $rep2 = Invoke-RestMethod -Uri $u2 -TimeoutSec 12 -UseBasicParsing
+                if ([bool]$rep2.ok) {
+                    $Cle   = $cleSaisie
+                    $cleOK = $true
+                    Write-Host "  Cle validee !`n" -ForegroundColor Green
+                } else {
+                    Write-Host "  Cle invalide -> niveau FAIBLE conserve.`n" -ForegroundColor Red
+                }
+            } catch {
+                Write-Host "  Verification impossible (pas de connexion Internet ?) -> niveau FAIBLE conserve.`n" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "  Niveau FAIBLE conserve.`n" -ForegroundColor Gray
+        }
+    }
+
+    $niveau = if ($cleOK) { $niveauDemande } else { "Faible" }
+    Write-Log "Niveau demande : $($niveauDemande.ToUpper()) / cle valide : $cleOK" "INFO"
     Write-Host "Niveau selectionne : $($niveau.ToUpper())`n" -ForegroundColor Cyan
 }
 Write-Log "Niveau d'optimisation : $($niveau.ToUpper())" "OK"
