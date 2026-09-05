@@ -101,6 +101,25 @@ function ConvertTo-SafeDate {
     catch { return $null }
 }
 function Confirm-Action { param([string]$Prompt) return ((Read-Host "$Prompt (o/N)") -match '^[OoYy]') }
+function Show-CompetitionWarning {
+    Write-Host "`n===============================================" -ForegroundColor Magenta
+    Write-Host "  NIVEAU COMPETITION - Reduction de securite Windows" -ForegroundColor Magenta
+    Write-Host "===============================================" -ForegroundColor Magenta
+    Write-Host "  Ce tweak desactive VBS / Memory Integrity (Isolation du noyau)." -ForegroundColor Yellow
+    Write-Host "  Gain mesure (benchmarks tiers) : ~5-8% de FPS moyen, et surtout" -ForegroundColor Yellow
+    Write-Host "  15-25% de mieux sur les 1% low (moins de micro-saccades) sur les CPU" -ForegroundColor Yellow
+    Write-Host "  fortement sollicites. Variable selon le PC, jamais garanti." -ForegroundColor Yellow
+    Write-Host "  Ce gain reduit la protection contre les rootkits et malwares" -ForegroundColor Yellow
+    Write-Host "  sophistiques. Ce n'est PAS un simple confort : c'est un compromis" -ForegroundColor Yellow
+    Write-Host "  securite contre performance." -ForegroundColor Yellow
+    Write-Host "  RISQUE SUPPLEMENTAIRE : les anti-triche modernes (Vanguard/Valorant," -ForegroundColor Yellow
+    Write-Host "  Easy Anti-Cheat, BattlEye) verifient VBS/HVCI. Le desactiver peut" -ForegroundColor Yellow
+    Write-Host "  empecher un jeu de se lancer, provoquer un kick, voire un BANNISSEMENT" -ForegroundColor Yellow
+    Write-Host "  DE COMPTE - definitif et non indemnisable." -ForegroundColor Yellow
+    Write-Host "  A n'appliquer QUE si le client a ete informe et est volontaire" -ForegroundColor Yellow
+    Write-Host "  (usage competitif/esport). Necessite un redemarrage pour agir." -ForegroundColor Yellow
+    Write-Host "  Reversible : Undo (menu 1 > 4) restaure la cle, puis redemarrer.`n" -ForegroundColor Gray
+}
 function HtmlEnc { param($s) if($null -eq $s){return ""}; return ([System.Web.HttpUtility]::HtmlEncode([string]$s)) }
 Add-Type -AssemblyName System.Web -ErrorAction SilentlyContinue
 
@@ -370,6 +389,11 @@ if ($Interactive) {
     $niveau = if ($cleOK) { $niveauDemande } else { "Faible" }
     Write-Log "Niveau demande : $($niveauDemande.ToUpper()) / cle valide : $cleOK" "INFO"
     Write-Host "Niveau selectionne : $($niveau.ToUpper())`n" -ForegroundColor Cyan
+    if ($niveau -eq "Competition") {
+        Show-CompetitionWarning
+        Write-Host "  (Ce niveau redemandera une decharge signee + une confirmation ecrite" -ForegroundColor Gray
+        Write-Host "  juste avant l'application reelle du tweak, plus loin dans le script.)`n" -ForegroundColor Gray
+    }
 }
 Write-Log "Niveau d'optimisation : $($niveau.ToUpper())" "OK"
 # Aides de decision : quel niveau autorise quoi
@@ -2009,24 +2033,7 @@ if ($Interactive -and $tweaksGamingAutorises) {
         # avec la machine et l'heure : c'est la preuve que Valentin a choisi cette action en
         # connaissance de cause pour ce client precis (voir DECHARGE-CLIENT.md).
         if ($tweaksCompetitionAutorises) {
-            Write-Host "`n===============================================" -ForegroundColor Magenta
-            Write-Host "  NIVEAU COMPETITION - Reduction de securite Windows" -ForegroundColor Magenta
-            Write-Host "===============================================" -ForegroundColor Magenta
-            Write-Host "  Ce tweak desactive VBS / Memory Integrity (Isolation du noyau)." -ForegroundColor Yellow
-            Write-Host "  Gain mesure (benchmarks tiers) : ~5-8% de FPS moyen, et surtout" -ForegroundColor Yellow
-            Write-Host "  15-25% de mieux sur les 1% low (moins de micro-saccades) sur les CPU" -ForegroundColor Yellow
-            Write-Host "  fortement sollicites. Variable selon le PC, jamais garanti." -ForegroundColor Yellow
-            Write-Host "  Ce gain reduit la protection contre les rootkits et malwares" -ForegroundColor Yellow
-            Write-Host "  sophistiques. Ce n'est PAS un simple confort : c'est un compromis" -ForegroundColor Yellow
-            Write-Host "  securite contre performance." -ForegroundColor Yellow
-            Write-Host "  RISQUE SUPPLEMENTAIRE : les anti-triche modernes (Vanguard/Valorant," -ForegroundColor Yellow
-            Write-Host "  Easy Anti-Cheat, BattlEye) verifient VBS/HVCI. Le desactiver peut" -ForegroundColor Yellow
-            Write-Host "  empecher un jeu de se lancer, provoquer un kick, voire un BANNISSEMENT" -ForegroundColor Yellow
-            Write-Host "  DE COMPTE - definitif et non indemnisable." -ForegroundColor Yellow
-            Write-Host "  A n'appliquer QUE si le client a ete informe et est volontaire" -ForegroundColor Yellow
-            Write-Host "  (usage competitif/esport). Necessite un redemarrage pour agir." -ForegroundColor Yellow
-            Write-Host "  Reversible : Undo (menu 1 > 4) restaure la cle, puis redemarrer.`n" -ForegroundColor Gray
-
+            Show-CompetitionWarning
             Write-Host "  ETAPE 1/2 - Decharge de responsabilite" -ForegroundColor Cyan
             Write-Host "  Le modele DECHARGE-CLIENT.md doit etre rempli, explique et SIGNE par" -ForegroundColor Gray
             Write-Host "  le client AVANT cette etape (papier, 2 exemplaires). Sans decharge" -ForegroundColor Gray
@@ -2057,6 +2064,9 @@ if ($Interactive -and $tweaksGamingAutorises) {
         Write-Host "`nBackup registre : $tweakBackup" -ForegroundColor Green
         Write-Host "Pour tout annuler : double-clic sur ce .reg + point de restauration disponible." -ForegroundColor Gray
         Write-Host "NB : SysMain/DiagTrack sont des SERVICES - pour les reactiver : Set-Service SysMain -StartupType Automatic." -ForegroundColor Gray
+    } else {
+        Write-Log "Tweaks gaming/extreme/competition NON appliques (refuse a la question generale)." "WARN"
+        Write-Host "`nAucun tweak applique : rien n'a ete modifie sur la machine." -ForegroundColor Yellow
     }
 }
 
