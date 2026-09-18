@@ -21,7 +21,9 @@
 .PARAMETER SkipTools
     Ne tente pas d'installer/utiliser les outils tiers (diagnostic natif seul).
 .NOTES
-    A executer en Administrateur. Prevoir 3-8 min (sfc/DISM sont longs).
+    A executer en Administrateur. Diagnostic complet : 5-15 min (sfc/DISM + outils tiers).
+    Avec -Fast : ~1-2 min (diagnostic gratuit). Le rapport HTML s'ouvre a la fin des qu'une
+    session utilisateur est presente (la tache planifiee SYSTEM n'ouvre rien).
 #>
 
 param(
@@ -29,7 +31,9 @@ param(
     [switch]$ReportOnly,
     [switch]$SkipTools,
     [switch]$Undo,
-    [switch]$Fast,    # saute sfc + DISM : passage de 3-8 min a < 1 min
+    [switch]$Fast,    # passage rapide (~1-2 min au lieu de 20-30) : saute l'installation des outils
+                      #  tiers (winget), sfc + DISM, et la recherche de doublons par hash. Utilise par
+                      #  le diagnostic gratuit et l'option RAPIDE du menu.
     [string]$Cle = "" # cle d'intervention Allo Valentin : debloque l'optimisation (sinon diagnostic seul)
 )
 
@@ -445,7 +449,13 @@ function Ensure-WingetPackage {
     Write-Log "Echec installation $FriendlyName." "WARN"; return $false
 }
 
-if (-not $SkipTools -and $wingetAvailable) {
+# Mode -Fast (diagnostic gratuit / passage rapide) : on NE tente PAS d'installer les
+# outils tiers. Sur un PC client a froid, ces deux telechargements winget prenaient
+# jusqu'a 20-30 min et faisaient croire a un blocage. Le diagnostic natif suffit : la
+# sante SMART est lue nativement plus bas, les temperatures sont juste omises.
+if ($Fast) {
+    Write-Log "Outils tiers (LibreHardwareMonitor / CrystalDiskInfo) sautes : mode -Fast." "WARN"
+} elseif (-not $SkipTools -and $wingetAvailable) {
     # LibreHardwareMonitor (temperatures) et CrystalDiskInfo (SMART)
     if (Ensure-WingetPackage -Id "LibreHardwareMonitor.LibreHardwareMonitor" -FriendlyName "LibreHardwareMonitor") { $toolStatus.LHM = "OK" }
     if (Ensure-WingetPackage -Id "CrystalDewWorld.CrystalDiskInfo" -FriendlyName "CrystalDiskInfo") { $toolStatus.CDI = "OK" }
@@ -1395,11 +1405,18 @@ if ($Interactive -and $recoverable.Count -gt 0) {
 # sont identiques octet pour octet. On garde TOUJOURS une copie, on ne propose
 # que les copies en trop, avec validation manuelle. Jamais de suppression auto.
 Write-Log "Recherche de doublons reels (par contenu)..."
-Write-Host "  >> Calcul des empreintes (hash) des fichiers. Peut prendre 1-2 min si le dossier" -ForegroundColor Cyan
-Write-Host "     Telechargements est volumineux. Patiente." -ForegroundColor Cyan
 $dupGroups = @()
 $dupTotalMB = 0
-$scanDup = @("$env:USERPROFILE\Downloads", "$env:USERPROFILE\Documents")
+# En mode -Fast, on ne hash pas les fichiers : le scan de Downloads + Documents peut
+# durer plusieurs minutes chez un client qui a beaucoup de gros fichiers.
+if ($Fast) {
+    $scanDup = @()
+    Write-Log "Recherche de doublons sautee : mode -Fast." "WARN"
+} else {
+    Write-Host "  >> Calcul des empreintes (hash) des fichiers. Peut prendre 1-2 min si le dossier" -ForegroundColor Cyan
+    Write-Host "     Telechargements est volumineux. Patiente." -ForegroundColor Cyan
+    $scanDup = @("$env:USERPROFILE\Downloads", "$env:USERPROFILE\Documents")
+}
 $minSize = 1MB   # on ignore les petits fichiers (gain negligeable, scan plus rapide)
 
 # DOSSIERS TECHNIQUES A EXCLURE : y supprimer un "doublon" casse le projet/l'appli.
@@ -2497,9 +2514,15 @@ function Find-Exe {
     return $null
 }
 
-if ($Interactive) {
-    Start-Process $reportFile   # ouvre le rapport HTML
+# Ouvre le rapport des qu'une VRAIE session utilisateur est presente. Le diagnostic
+# gratuit et "Rapport seul" tournent en -ReportOnly (Interactive = $false) : avant, le
+# rapport etait genere mais jamais ouvert. Desormais ils l'ouvrent aussi. La tache
+# planifiee mensuelle tourne en compte SYSTEM non interactif : elle n'ouvre rien.
+if ([Environment]::UserInteractive) {
+    try { Start-Process $reportFile } catch { Write-Log "Ouverture du rapport impossible : $_" "WARN" }
+}
 
+if ($Interactive) {
     # LibreHardwareMonitor : lecture temps reel des temperatures CPU/GPU
     if ($toolStatus.LHM -eq "OK") {
         $lhm = Find-Exe -Roots @("$env:ProgramFiles\LibreHardwareMonitor","${env:ProgramFiles(x86)}\LibreHardwareMonitor","$env:LOCALAPPDATA\Programs") -Filter "LibreHardwareMonitor.exe"
