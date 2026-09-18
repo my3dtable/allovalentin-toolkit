@@ -46,6 +46,7 @@ $scriptFluid = Join-Path $base "AlloValentin-Fluidite.ps1"
 $scriptCarte = Join-Path $base "AlloValentin-CarteMere.ps1"
 $scriptJeux  = Join-Path $base "AlloValentin-Jeux.ps1"
 $scriptBilan = Join-Path $base "AlloValentin-Bilan.ps1"
+$scriptDemarrage = Join-Path $base "AlloValentin-Demarrage.ps1"
 $scriptRapport = Join-Path $base "AlloValentin-RapportClient.ps1"
 
 # Argument cle a passer aux outils qui en ont besoin (optimisation, compte-rendu IA)
@@ -154,11 +155,13 @@ while ($continuer) {
             Sous-Menu "Analyses (lecture seule)" @{
                 "1" = @{ Label = "Bilan sante & depannage  (batterie, ecrans bleus, imprimante, disque, adware, sauvegarde)"
                          Action = { Invoke-Outil $scriptBilan "Bilan sante & depannage" } }
-                "2" = @{ Label = "Fluidite / FPS  (ecran, RAM/XMP, PCIe, jeux sur HDD, reseau, overlays... 25 controles)"
+                "2" = @{ Label = "Ce qui se lance au demarrage  (persistance / malware : autoruns natif, signatures)"
+                         Action = { Invoke-Outil $scriptDemarrage "Ce qui se lance au demarrage" } }
+                "3" = @{ Label = "Fluidite / FPS  (ecran, RAM/XMP, PCIe, jeux sur HDD, reseau, overlays... 25 controles)"
                          Action = { Invoke-Outil $scriptFluid "Analyse de fluidite" } }
-                "3" = @{ Label = "Securite / antivirus  (etat Defender, scan rapide, quarantaine)"
+                "4" = @{ Label = "Securite / antivirus  (etat Defender, scan rapide, quarantaine)"
                          Action = { Invoke-Outil $scriptSecu "Analyse securite" } }
-                "4" = @{ Label = "Configs de jeux  (VSync force, super-sampling, pas de frame cap...)"
+                "5" = @{ Label = "Configs de jeux  (VSync force, super-sampling, pas de frame cap...)"
                          Action = { Invoke-Outil $scriptJeux "Analyse des configs de jeux" } }
             }
         }

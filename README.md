@@ -37,6 +37,7 @@ Ca telecharge la derniere version du toolkit dans
 | `AlloValentin-Verif.ps1` | Etat machine avant / apres (preuve de reversibilite) |
 | `AlloValentin-Perf.ps1` | Mesures de performance avant / apres |
 | `AlloValentin-Bilan.ps1` | Bilan sante & depannage : batterie, ecrans bleus, imprimante, SMART, adware (hosts/proxy/DNS), activation, sauvegarde (lecture seule) |
+| `AlloValentin-Demarrage.ps1` | Ce qui se lance au demarrage (autoruns natif) : Run, taches, services, Winlogon, IFEO, AppInit, WMI, avec verification de signature (lecture seule) |
 | `AlloValentin-Fluidite.ps1` | Analyse fluidite / FPS (lecture seule, ~25 controles) |
 | `AlloValentin-Securite.ps1` | Etat Defender, scan rapide (lecture seule) |
 | `AlloValentin-Jeux.ps1` | Verification des configs de jeux (lecture seule) |
