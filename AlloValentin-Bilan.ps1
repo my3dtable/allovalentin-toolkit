@@ -230,9 +230,24 @@ try {
         })
     }
     if ($lignesHosts.Count) {
-        Add-Constat 1 "Detournement" "Le fichier hosts contient $($lignesHosts.Count) redirection(s)" `
-            "Des sites sont redetournes au niveau du fichier hosts : $((($lignesHosts | Select-Object -First 3) -join ' | ')). C'est une technique classique d'adware pour rediriger vers de la pub ou bloquer des mises a jour / antivirus." `
-            "Verifier chaque ligne. Si elles n'ont pas ete ajoutees volontairement, les retirer (ouvrir le fichier en admin) et lancer un Nettoyage & virus."
+        # On separe deux cas tres differents :
+        #  - cible = IP PRIVEE (192.168.x, 10.x, 172.16-31.x, 127.x) : presque jamais un
+        #    adware. C'est un serveur local, un labo, un environnement de travail. Simple info.
+        #  - cible = IP PUBLIQUE : la vraie technique d'adware (detourner un domaine connu
+        #    vers un serveur pirate, ou bloquer les MAJ / l'antivirus). Vraie alerte.
+        $prive = '^(0\.0\.0\.0|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|fe80|localhost)'
+        $publiques = @($lignesHosts | Where-Object { ($_.Trim() -split '\s+')[0] -notmatch $prive })
+        $privees   = @($lignesHosts | Where-Object { ($_.Trim() -split '\s+')[0] -match $prive })
+        if ($publiques.Count) {
+            Add-Constat 1 "Detournement" "Le fichier hosts detourne $($publiques.Count) domaine(s) vers un serveur externe" `
+                "Redirection(s) vers une adresse publique : $((($publiques | Select-Object -First 3) -join ' | ')). C'est la technique classique d'adware : renvoyer un site connu vers un serveur pirate, ou bloquer les mises a jour et l'antivirus." `
+                "Verifier chaque ligne. Si elle n'a pas ete ajoutee volontairement, la retirer (fichier en admin) et lancer un Nettoyage & virus."
+        }
+        if ($privees.Count) {
+            Add-Constat 2 "Detournement" "$($privees.Count) entree(s) hosts vers le reseau local" `
+                "Entree(s) pointant vers une adresse privee : $((($privees | Select-Object -First 3) -join ' | ')). Ce n'est pas un adware (une IP locale ne va pas sur Internet) : c'est en general un serveur interne, un labo ou un environnement de travail." `
+                "A confirmer avec le client. Si le nom ne lui dit rien du tout, la retirer par prudence."
+        }
     }
     # b) proxy systeme active (souvent pose par un adware)
     $proxyKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
