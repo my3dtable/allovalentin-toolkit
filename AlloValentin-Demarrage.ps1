@@ -96,6 +96,8 @@ function Test-Suspicion {
     if (-not (Test-Path $chemin -PathType Leaf -EA SilentlyContinue)) {
         $res.Niveau = 2; $res.Pourquoi = "fichier introuvable a cet emplacement"; return $res
     }
+    # Applications du Microsoft Store (signees au niveau du paquet) : de confiance.
+    if ($chemin -like '*\WindowsApps\*') { $res.Niveau = 3; $res.Editeur = "Microsoft Store"; $res.Pourquoi = "application du Microsoft Store"; return $res }
     # Signature (avec cache)
     if ($sigCache.ContainsKey($chemin)) { $sig = $sigCache[$chemin] }
     else { $sig = Get-AuthenticodeSignature $chemin -EA SilentlyContinue; $sigCache[$chemin] = $sig }
